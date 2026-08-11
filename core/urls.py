@@ -19,7 +19,7 @@ urlpatterns = [
     ),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     # Apps
-    path("api/accounts/", include("accounts.urls", namespace="accounts")),
+    #path("api/accounts/", include("accounts.urls", namespace="accounts")),
     # path("api/catalog/", include("catalog.urls", namespace="catalog")),
     # path("api/marketplace/", include("marketplace.urls", namespace="marketplace")),
 ]

@@ -99,7 +99,7 @@ if not DEBUG:  # Si on est en production sur Render
 
     
 # --- AUTHENTIFICATION ---
-AUTH_USER_MODEL = 'base_api.User'
+AUTH_USER_MODEL = 'accounts.models.user.User'  # Utilise le modèle User personnalisé
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

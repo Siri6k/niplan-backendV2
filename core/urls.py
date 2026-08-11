@@ -1,84 +1,29 @@
-from django.contrib import admin
-from django.urls import path, include
+# core/urls.py
+
 from django.conf import settings
 from django.conf.urls.static import static
-from base_api.controllers.ProductController import (
-    ProductListView,
-    MyProductViewSet,
+from django.contrib import admin
+from django.urls import include, path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
 )
-from base_api.controllers.AuthController import (
-    # Nouveau système
-    DetectUserFlowView,
-    NewUserRequestOTPView,
-    NewUserVerifyOTPView,
-    LegacyUserSetPasswordView,
-    LoginView,
-    # Ancien (deprecated)
-)
-from base_api.controllers.AdminController import AdminUserListView, AdminOTPLogView
-from base_api.controllers.BusinessController import BusinessDetailView, MyBusinessUpdateView
-
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from rest_framework_simplejwt.views import TokenRefreshView
-
-from rest_framework.routers import DefaultRouter
-router = DefaultRouter()
-router.register(r'my-products', MyProductViewSet, basename='my-product')
-
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-
-   
-    # URLs pour la documentation
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    # Vue Swagger UI : ta documentation interactive !
-    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-
-    # --- AUTHENTIFICATION ---
-     # === NOUVEAU SYSTÈME ===
-    
-    # Détection intelligente (recommandé en premier)
-    path('api/auth/detect-flow/', DetectUserFlowView.as_view(), name='detect-flow'),
-    
-    # Nouveaux utilisateurs (OTP + création compte)
-    path('api/auth/register/request-otp/', NewUserRequestOTPView.as_view(), name='register-request-otp'),
-    path('api/auth/register/verify-otp/', NewUserVerifyOTPView.as_view(), name='register-verify-otp'),
-    
-    # Anciens utilisateurs (setup MDP sans OTP)
-    path('api/auth/legacy/set-password/', LegacyUserSetPasswordView.as_view(), name='legacy-set-password'),
-    
-    # Login standard
-    path('api/auth/login/', LoginView.as_view(), name='login'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
-    
-    #----------------------------------------------------------------#
-    
-    # --- PRODUITS PUBLIC ---
-    path('api/products/', ProductListView.as_view(), name='product-list'),
-
-    # --- CRUD PRIVÉ (La correction est ici) ---
-    # On inclut simplement les URLs du router à la racine de 'api/'
-    # Le router va générer : 
-    # GET/POST  -> api/my-products/
-    # GET/PUT/PATCH/DELETE -> api/my-products/<slug>/
-    path('api/', include(router.urls)),
-    
-    # --- BUSINESS / BOUTIQUE ---
-    path('api/business/<slug:slug>/', BusinessDetailView.as_view(), name='business-detail'),
-    path('api/my-business/update/', MyBusinessUpdateView.as_view(), name='business-update'),
-
-    # --- ADMIN ---
-    path('api/admin/users/', AdminUserListView.as_view(), name='admin-users'),
-    path('api/admin/otps/', AdminOTPLogView.as_view(), name='admin-otps'),
-
-    # --- ANALYTICS ---
-    path('api/analytics/', include('analytics.urls')),
-
-    # --- LISTING (Annonces) ---
-    path('api/v2/', include('listing.urls')),
+    path("admin/", admin.site.urls),
+    # API schema
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger"
+    ),
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    # Apps
+    path("api/accounts/", include("accounts.urls", namespace="accounts")),
+    # path("api/catalog/", include("catalog.urls", namespace="catalog")),
+    # path("api/marketplace/", include("marketplace.urls", namespace="marketplace")),
 ]
 
-# Servir les fichiers média en local (Cloudinary prend le relais en prod)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

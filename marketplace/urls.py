@@ -7,6 +7,8 @@ from marketplace.controllers import (
     ListingDetailView,
     ListingListView,
     MyListingListView,
+    FavoriteListView,
+    ListingFavoriteView,
 )
 
 app_name = "marketplace"
@@ -19,5 +21,15 @@ urlpatterns = [
         "listings/<uuid:pk>/actions/",
         ListingActionView.as_view(),
         name="listing-actions",
+    ),
+    path(
+        "favorites/",
+        FavoriteListView.as_view(),
+        name="favorite-list",
+    ),
+    path(
+        "listings/<uuid:pk>/favorite/",
+        ListingFavoriteView.as_view(),
+        name="listing-favorite",
     ),
 ]

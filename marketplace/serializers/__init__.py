@@ -7,9 +7,12 @@ from .listing import (
     ListingUpdateSerializer,
 )
 
+from .favorite import FavoriteSerializer
+
 __all__ = [
     "ListingReadSerializer",
     "ListingCreateSerializer",
     "ListingActionSerializer",
     "ListingUpdateSerializer",
+    "FavoriteSerializer",
 ]

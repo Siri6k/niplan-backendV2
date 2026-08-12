@@ -91,6 +91,34 @@ class ListingService:
 
     @staticmethod
     @transaction.atomic
+    def update_listing(*, listing: Listing, user, **validated_data) -> Listing:
+        seller = ListingService.get_seller(user)
+
+        if listing.seller_id != seller.id:
+            raise ValidationError("Vous ne pouvez pas modifier cette annonce.")
+
+        if listing.status == Listing.Status.ARCHIVED:
+            raise ValidationError("Une annonce archivée ne peut pas être modifiée.")
+
+        allowed_fields = [
+            "title",
+            "description",
+            "price",
+            "currency",
+            "condition",
+            "stock",
+            "location",
+            "is_negotiable",
+        ]
+        for field, value in validated_data.items():
+            if field in allowed_fields:
+                setattr(listing, field, value)
+
+        listing.save()
+        return listing
+
+    @staticmethod
+    @transaction.atomic
     def publish_listing(*, listing: Listing, user) -> Listing:
         """Publie une annonce (DRAFT → PUBLISHED)."""
 

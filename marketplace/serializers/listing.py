@@ -88,6 +88,33 @@ class ListingCreateSerializer(serializers.Serializer):
         return value
 
 
+class ListingUpdateSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=255, required=False)
+    description = serializers.CharField(required=False, allow_blank=True)
+
+    price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    currency = serializers.CharField(max_length=3, required=False)
+
+    condition = serializers.ChoiceField(
+        choices=Listing.Condition.choices, required=False
+    )
+    stock = serializers.IntegerField(min_value=0, required=False)
+    location = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    is_negotiable = serializers.BooleanField(required=False)
+
+    def validate_price(self, value: Decimal):
+        if value <= 0:
+            raise serializers.ValidationError("Le prix doit être supérieur à zéro.")
+        return value
+
+    def validate_currency(self, value: str):
+        value = value.upper()
+        allowed = {"USD", "CDF", "ZAR", "ZMW"}
+        if value not in allowed:
+            raise serializers.ValidationError("Devise non supportée.")
+        return value
+
+
 class ListingActionSerializer(serializers.Serializer):
     """
     Serializer pour les actions de workflow (publish, pause, archive).

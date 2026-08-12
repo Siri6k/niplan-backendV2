@@ -2,6 +2,7 @@
 
 from .attribute import AttributeValue, ProductAttribute
 from .category import Category
+from .media import ProductMedia
 from .product import Product
 from .variant import ProductVariant, VariantAttributeValue
 
@@ -12,4 +13,5 @@ __all__ = [
     "AttributeValue",
     "ProductVariant",
     "VariantAttributeValue",
+    "ProductMedia",
 ]

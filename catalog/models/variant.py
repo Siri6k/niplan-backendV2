@@ -62,13 +62,13 @@ class ProductVariant(models.Model):
 
     @property
     def attribute_summary(self) -> str:
-        """Black / 256GB / 8GB"""
-        values = self.attribute_values.select_related("attribute").all()
-        return " / ".join([str(v) for v in values])
+        """Color: Black / Storage: 256GB"""
+        assignments = self.variant_values.select_related("value__attribute").all()
+        return " / ".join([str(a.value) for a in assignments])
 
     @property
     def display_title(self) -> str:
-        """Samsung Galaxy S24 — Black / 256GB"""
+        """Samsung Galaxy S24 — Color: Black / Storage: 256GB"""
         base = self.product.display_name
         summary = self.attribute_summary
         return f"{base} — {summary}" if summary else base

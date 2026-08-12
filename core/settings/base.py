@@ -66,7 +66,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "accounts",
-    # "catalog",
+    "catalog",
     # "marketplace",
     # "cart",
     # "orders",

@@ -62,6 +62,7 @@ THIRD_PARTY_APPS = [
     "drf_spectacular",
     "cloudinary_storage",
     "cloudinary",
+    "django_filters",
 ]
 
 LOCAL_APPS = [

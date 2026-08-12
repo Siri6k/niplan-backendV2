@@ -95,4 +95,4 @@ class ProductMedia(models.Model):
         prefix = f"{self.product.name}"
         if self.variant:
             prefix = f"{self.variant.sku}"
-        return f"{prefix} — {self.media_type.label}"
+        return f"{prefix} — {self.get_media_type_display()}"

@@ -2,7 +2,6 @@
 Django==5.0
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.3.1
-
 # --- Base de données & Déploiement ---
 psycopg2-binary==2.9.9         # Driver pour PostgreSQL (Railway)
 dj-database-url==2.1.0         # Pour lire DATABASE_URL automatiquement
@@ -33,3 +32,5 @@ twilio==8.10.0
 
 # --- AWS Lambda (si besoin de fonctions serverless) ---
 #mangum==0.14.0
+# --- Django Filters ---
+django-filter>=23.5

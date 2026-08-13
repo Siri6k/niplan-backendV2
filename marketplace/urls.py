@@ -9,6 +9,10 @@ from marketplace.controllers import (
     MyListingListView,
     FavoriteListView,
     ListingFavoriteView,
+    OfferActionView,
+    ListingOfferView,
+    MyOffersView,
+    SellerOffersView,
 )
 
 app_name = "marketplace"
@@ -31,5 +35,25 @@ urlpatterns = [
         "listings/<uuid:pk>/favorite/",
         ListingFavoriteView.as_view(),
         name="listing-favorite",
+    ),
+    path(
+        "listings/<uuid:pk>/offers/",
+        ListingOfferView.as_view(),
+        name="listing-offers",
+    ),
+    path(
+        "offers/<uuid:pk>/actions/",
+        OfferActionView.as_view(),
+        name="offer-actions",
+    ),
+    path(
+        "my-offers/",
+        MyOffersView.as_view(),
+        name="my-offers",
+    ),
+    path(
+        "seller/offers/",
+        SellerOffersView.as_view(),
+        name="seller-offers",
     ),
 ]

@@ -54,9 +54,6 @@ class ListingCreateSerializer(serializers.Serializer):
     Le client ne contrôle jamais : seller, status, published_at.
     """
 
-    store = serializers.PrimaryKeyRelatedField(
-        queryset=Store.objects.all(),
-    )
     variant = serializers.PrimaryKeyRelatedField(
         queryset=ProductVariant.objects.all(),
     )

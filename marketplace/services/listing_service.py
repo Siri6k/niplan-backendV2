@@ -27,6 +27,14 @@ class ListingService:
             raise ValidationError("Cet utilisateur ne possède pas de profil vendeur.")
 
     @staticmethod
+    def get_store(seller: SellerProfile) -> Store:
+        """Retourne la boutique associée au vendeur."""
+        try:
+            return seller.store
+        except Store.DoesNotExist:
+            raise ValidationError("Ce vendeur ne possède pas de boutique.")
+
+    @staticmethod
     def validate_store_ownership(store: Store, seller: SellerProfile) -> None:
         """Vérifie que la boutique appartient bien au vendeur."""
         if store.seller_id != seller.id:
@@ -49,7 +57,6 @@ class ListingService:
     def create_listing(
         *,
         user,
-        store: Store,
         variant: ProductVariant,
         title: str,
         price: Decimal,
@@ -63,6 +70,7 @@ class ListingService:
         """Crée une annonce en vérifiant toutes les règles métier."""
 
         seller = ListingService.get_seller(user)
+        store = ListingService.get_store(seller)
         ListingService.validate_store_ownership(store, seller)
         ListingService.validate_variant(variant)
 

@@ -119,3 +119,71 @@ class FavoriteTests(TestCase):
                 user=self.user,
                 listing=self.listing,
             )
+
+    def test_is_favorite_returns_false_for_anonymous(self):
+        from django.contrib.auth.models import AnonymousUser
+
+        anonymous = AnonymousUser()
+        self.assertFalse(
+            FavoriteService.is_favorite(
+                user=anonymous,
+                listing=self.listing,
+            )
+        )
+
+    def test_favorite_str_representation(self):
+        favorite = Favorite.objects.create(
+            user=self.user,
+            listing=self.listing,
+        )
+        expected = f"{self.user} → {self.listing}"
+        self.assertEqual(str(favorite), expected)
+
+    def test_favorite_ordering_by_created_at_desc(self):
+        """Les favoris récents apparaissent en premier"""
+        import time
+
+        fav1 = Favorite.objects.create(
+            user=self.user,
+            listing=self.listing,
+        )
+
+        # Créer un second listing pour un second favori
+        listing2 = Listing.objects.create(
+            seller=self.seller,
+            store=self.store,
+            variant=self.variant,
+            title="iPhone 15",
+            price="900.00",
+            currency="USD",
+            stock=5,
+            status=Listing.Status.PUBLISHED,
+        )
+
+        time.sleep(0.01)  # garantir l'ordre temporel
+
+        fav2 = Favorite.objects.create(
+            user=self.user,
+            listing=listing2,
+        )
+
+        favorites = list(Favorite.objects.all())
+        self.assertEqual(favorites[0], fav2)
+        self.assertEqual(favorites[1], fav1)
+
+    def test_service_remove_nonexistent_favorite(self):
+        with self.assertRaises(ValidationError):
+            FavoriteService.remove_favorite(
+                user=self.user,
+                listing=self.listing,
+            )
+
+    def test_service_add_favorite_unauthenticated(self):
+        from django.contrib.auth.models import AnonymousUser
+
+        anonymous = AnonymousUser()
+        with self.assertRaises(ValidationError):
+            FavoriteService.add_favorite(
+                user=anonymous,
+                listing=self.listing,
+            )

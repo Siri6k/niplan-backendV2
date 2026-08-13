@@ -49,7 +49,6 @@ class ListingServiceTests(TestCase):
     def test_create_listing(self):
         listing = ListingService.create_listing(
             user=self.user,
-            store=self.store,
             variant=self.variant,
             title="Samsung Galaxy S24",
             price=Decimal("850.00"),
@@ -76,7 +75,6 @@ class ListingServiceTests(TestCase):
         with self.assertRaises(ValidationError):
             ListingService.create_listing(
                 user=user_2,
-                store=self.store,
                 variant=self.variant,
                 title="Unauthorized listing",
                 price=Decimal("500.00"),
@@ -90,7 +88,6 @@ class ListingServiceTests(TestCase):
         with self.assertRaises(ValidationError):
             ListingService.create_listing(
                 user=self.user,
-                store=self.store,
                 variant=self.variant,
                 title="Inactive variant",
                 price=Decimal("500.00"),
@@ -104,7 +101,6 @@ class ListingServiceTests(TestCase):
         with self.assertRaises(ValidationError):
             ListingService.create_listing(
                 user=self.user,
-                store=self.store,
                 variant=self.variant,
                 title="Inactive product",
                 price=Decimal("500.00"),
@@ -115,7 +111,6 @@ class ListingServiceTests(TestCase):
         with self.assertRaises(ValidationError):
             ListingService.create_listing(
                 user=self.user,
-                store=self.store,
                 variant=self.variant,
                 title="Invalid price",
                 price=Decimal("0.00"),
@@ -126,7 +121,6 @@ class ListingServiceTests(TestCase):
         with self.assertRaises(ValidationError):
             ListingService.create_listing(
                 user=self.user,
-                store=self.store,
                 variant=self.variant,
                 title="Invalid price",
                 price=Decimal("-10.00"),
@@ -136,7 +130,6 @@ class ListingServiceTests(TestCase):
     def test_publish_listing(self):
         listing = ListingService.create_listing(
             user=self.user,
-            store=self.store,
             variant=self.variant,
             title="Samsung Galaxy S24",
             price=Decimal("850.00"),
@@ -152,7 +145,6 @@ class ListingServiceTests(TestCase):
     def test_cannot_publish_without_stock(self):
         listing = ListingService.create_listing(
             user=self.user,
-            store=self.store,
             variant=self.variant,
             title="Samsung Galaxy S24",
             price=Decimal("850.00"),
@@ -165,7 +157,6 @@ class ListingServiceTests(TestCase):
     def test_other_seller_cannot_publish_listing(self):
         listing = ListingService.create_listing(
             user=self.user,
-            store=self.store,
             variant=self.variant,
             title="Samsung Galaxy S24",
             price=Decimal("850.00"),
@@ -187,7 +178,6 @@ class ListingServiceTests(TestCase):
     def test_pause_listing(self):
         listing = ListingService.create_listing(
             user=self.user,
-            store=self.store,
             variant=self.variant,
             title="Samsung Galaxy S24",
             price=Decimal("850.00"),
@@ -202,7 +192,6 @@ class ListingServiceTests(TestCase):
     def test_archive_listing(self):
         listing = ListingService.create_listing(
             user=self.user,
-            store=self.store,
             variant=self.variant,
             title="Samsung Galaxy S24",
             price=Decimal("850.00"),
@@ -216,7 +205,6 @@ class ListingServiceTests(TestCase):
     def test_cannot_pause_non_published_listing(self):
         listing = ListingService.create_listing(
             user=self.user,
-            store=self.store,
             variant=self.variant,
             title="Samsung Galaxy S24",
             price=Decimal("850.00"),
@@ -229,7 +217,6 @@ class ListingServiceTests(TestCase):
     def test_cannot_publish_archived_listing(self):
         listing = ListingService.create_listing(
             user=self.user,
-            store=self.store,
             variant=self.variant,
             title="Samsung Galaxy S24",
             price=Decimal("850.00"),

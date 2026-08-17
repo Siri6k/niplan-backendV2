@@ -9,12 +9,10 @@ class OfferCreateSerializer(serializers.Serializer):
         decimal_places=2,
         min_value=0.01,
     )
-
     quantity = serializers.IntegerField(
         min_value=1,
         default=1,
     )
-
     message = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -27,6 +25,14 @@ class OfferReadSerializer(serializers.ModelSerializer):
         source="listing.title",
         read_only=True,
     )
+    seller_id = serializers.UUIDField(
+        source="listing.seller.user_id",
+        read_only=True,
+    )
+    seller_store = serializers.CharField(
+        source="listing.store.name",
+        read_only=True,
+    )
 
     class Meta:
         model = Offer
@@ -35,6 +41,8 @@ class OfferReadSerializer(serializers.ModelSerializer):
             "listing",
             "listing_title",
             "buyer",
+            "seller_id",
+            "seller_store",
             "unit_amount",
             "quantity",
             "total_amount",
@@ -62,14 +70,12 @@ class OfferActionSerializer(serializers.Serializer):
             "cancel",
         ]
     )
-
     unit_amount = serializers.DecimalField(
         max_digits=12,
         decimal_places=2,
         min_value=0.01,
         required=False,
     )
-
     message = serializers.CharField(
         required=False,
         allow_blank=True,

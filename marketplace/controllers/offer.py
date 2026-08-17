@@ -1,8 +1,9 @@
+from http.client import responses
+
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 
-from marketplace.serializers.listing import ListingReadSerializer
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,12 +19,31 @@ from marketplace.services.offer_service import OfferService
 
 @extend_schema(
     tags=["Marketplace"],
-    summary="Liste et création d'offres",
-    description="GET : liste publique des offres (filtrable, paginée). POST : créer une offre (acheteur authentifié).",
-    responses={200: OfferReadSerializer(many=True), 201: OfferReadSerializer},
+    summary="Faire une offre sur une annonce",
+    description="POST : Faire une offre sur une annonce (acheteur authentifié).",
+    responses={
+        201: OfferReadSerializer,
+        400: "Bad Request",
+        401: "Unauthorized",
+        404: "Not Found",
+    },
 )
 class ListingOfferView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        """Lister les offres d'un listing (vendeur = tout, acheteur = ses offres)"""
+        listing = get_object_or_404(Listing, pk=pk)
+        user = request.user
+
+        if listing.seller.user_id == user.id:
+            offers = Offer.objects.filter(listing=listing)
+        else:
+            offers = Offer.objects.filter(listing=listing, buyer=user)
+
+        offers = offers.select_related("buyer").order_by("-created_at")
+        serializer = OfferReadSerializer(offers, many=True)
+        return Response(serializer.data)
 
     def post(self, request, pk):
         listing = get_object_or_404(Listing, pk=pk)
@@ -34,9 +54,7 @@ class ListingOfferView(APIView):
         offer = OfferService.create_offer(
             buyer=request.user,
             listing=listing,
-            unit_amount=serializer.validated_data["unit_amount"],
-            quantity=serializer.validated_data["quantity"],
-            message=serializer.validated_data.get("message", ""),
+            **serializer.validated_data,
         )
 
         return Response(
@@ -47,9 +65,14 @@ class ListingOfferView(APIView):
 
 @extend_schema(
     tags=["Marketplace"],
-    summary="Actions sur une offre",
-    description="POST : Accepter, rejeter, annuler ou faire une contre-offre sur une offre (vendeur ou acheteur authentifié).",
-    responses={200: OfferReadSerializer, 400: "Bad Request", 404: "Not Found"},
+    summary="Gérer les offres",
+    description="POST : Accepter, rejeter, annuler ou faire une contre-offre sur une offre (acheteur ou vendeur authentifié).",
+    responses={
+        200: OfferActionSerializer,
+        400: "Bad Request",
+        401: "Unauthorized",
+        404: "Not Found",
+    },
 )
 class OfferActionView(APIView):
     permission_classes = [IsAuthenticated]
@@ -93,37 +116,40 @@ class OfferActionView(APIView):
 
 @extend_schema(
     tags=["Marketplace"],
-    summary="Liste des offres de l'utilisateur connecté",
-    description="GET : Récupère la liste des offres faites par l'utilisateur connecté (acheteur).",
+    summary="Liste des offres faites par l'utilisateur",
+    description="GET : Récupérer la liste des offres faites par l'utilisateur authentifié.",
     responses={200: OfferReadSerializer(many=True)},
 )
-class MyOffersView(APIView):
+class MyOfferListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = OfferReadSerializer
 
-    def get(self, request):
-        offers = request.user.offers.select_related(
-            "listing", "listing__store"
-        ).order_by("-created_at")
-
-        serializer = OfferReadSerializer(offers, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        return Offer.objects.filter(buyer=self.request.user).select_related(
+            "listing",
+            "listing__store",
+            "listing__variant",
+            "listing__variant__product",
+        )
 
 
 @extend_schema(
     tags=["Marketplace"],
-    summary="Liste des offres reçues par le vendeur connecté",
-    description="GET : Récupère la liste des offres reçues par le vendeur connecté (vendeur authentifié).",
+    summary="Liste des offres reçues par le vendeur",
+    description="GET : Récupérer la liste des offres reçues par le vendeur authentifié.",
     responses={200: OfferReadSerializer(many=True)},
 )
-class SellerOffersView(APIView):
+class SellerOfferListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = OfferReadSerializer
 
-    def get(self, request):
-        offers = (
-            Offer.objects.filter(listing__seller__user=request.user)
-            .select_related("listing", "buyer")
-            .order_by("-created_at")
+    def get_queryset(self):
+        return Offer.objects.filter(
+            listing__seller__user=self.request.user
+        ).select_related(
+            "listing",
+            "buyer",
+            "listing__store",
+            "listing__variant",
+            "listing__variant__product",
         )
-
-        serializer = OfferReadSerializer(offers, many=True)
-        return Response(serializer.data)

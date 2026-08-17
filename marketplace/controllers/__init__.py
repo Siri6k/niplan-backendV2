@@ -13,8 +13,8 @@ from .favorite import (
 from .offer import (
     ListingOfferView,
     OfferActionView,
-    MyOffersView,
-    SellerOffersView,
+    MyOfferListView,
+    SellerOfferListView,
 )
 
 __all__ = [
@@ -26,6 +26,6 @@ __all__ = [
     "FavoriteListView",
     "OfferActionView",
     "ListingOfferView",
-    "MyOffersView",
-    "SellerOffersView",
+    "MyOfferListView",
+    "SellerOfferListView",
 ]

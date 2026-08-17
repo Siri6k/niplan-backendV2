@@ -21,6 +21,11 @@ class OfferTests(TestCase):
             password="TestPassword123!",
         )
 
+        self.random_user = User.objects.create_user(
+            email="random@niplan.com",
+            password="TestPassword123!",
+        )
+
         self.seller = SellerProfile.objects.create(
             user=self.seller_user,
             seller_type="INDIVIDUAL",
@@ -84,7 +89,6 @@ class OfferTests(TestCase):
                 buyer=self.seller_user,
                 listing=self.listing,
                 unit_amount=800.00,
-                quantity=1,
             )
 
     def test_cannot_offer_on_unpublished_listing(self):
@@ -96,7 +100,6 @@ class OfferTests(TestCase):
                 buyer=self.buyer,
                 listing=self.listing,
                 unit_amount=800.00,
-                quantity=1,
             )
 
     def test_quantity_cannot_exceed_stock(self):
@@ -109,11 +112,13 @@ class OfferTests(TestCase):
             )
 
     def test_seller_can_accept_offer(self):
-        offer = OfferService.create_offer(
-            buyer=self.buyer,
+        offer = Offer.objects.create(
             listing=self.listing,
-            unit_amount=800.00,
+            buyer=self.buyer,
+            unit_amount=800,
+            currency="USD",
             quantity=1,
+            status=Offer.Status.PENDING,
         )
 
         accepted = OfferService.accept_offer(
@@ -124,12 +129,30 @@ class OfferTests(TestCase):
         self.assertEqual(accepted.status, Offer.Status.ACCEPTED)
         self.assertIsNotNone(accepted.responded_at)
 
-    def test_seller_can_reject_offer(self):
-        offer = OfferService.create_offer(
-            buyer=self.buyer,
+    def test_random_user_cannot_accept_offer(self):
+        offer = Offer.objects.create(
             listing=self.listing,
-            unit_amount=800.00,
+            buyer=self.buyer,
+            unit_amount=800,
+            currency="USD",
             quantity=1,
+            status=Offer.Status.PENDING,
+        )
+
+        with self.assertRaises(ValidationError):
+            OfferService.accept_offer(
+                offer=offer,
+                user=self.random_user,
+            )
+
+    def test_seller_can_reject_offer(self):
+        offer = Offer.objects.create(
+            listing=self.listing,
+            buyer=self.buyer,
+            unit_amount=800,
+            currency="USD",
+            quantity=1,
+            status=Offer.Status.PENDING,
         )
 
         rejected = OfferService.reject_offer(
@@ -140,61 +163,117 @@ class OfferTests(TestCase):
         self.assertEqual(rejected.status, Offer.Status.REJECTED)
 
     def test_buyer_can_cancel_offer(self):
-        offer = OfferService.create_offer(
-            buyer=self.buyer,
+        offer = Offer.objects.create(
             listing=self.listing,
-            unit_amount=800.00,
+            buyer=self.buyer,
+            unit_amount=800,
+            currency="USD",
             quantity=1,
+            status=Offer.Status.PENDING,
         )
 
-        cancelled = OfferService.cancel_offer(
+        OfferService.cancel_offer(
             offer=offer,
             user=self.buyer,
         )
 
-        self.assertEqual(cancelled.status, Offer.Status.CANCELLED)
+        offer.refresh_from_db()
+        self.assertEqual(offer.status, Offer.Status.CANCELLED)
 
-    def test_counter_offer(self):
-        offer = OfferService.create_offer(
-            buyer=self.buyer,
+    def test_seller_cannot_cancel_offer(self):
+        offer = Offer.objects.create(
             listing=self.listing,
-            unit_amount=750.00,
+            buyer=self.buyer,
+            unit_amount=800,
+            currency="USD",
             quantity=1,
+            status=Offer.Status.PENDING,
+        )
+
+        with self.assertRaises(ValidationError):
+            OfferService.cancel_offer(
+                offer=offer,
+                user=self.seller_user,
+            )
+
+    def test_accepted_offer_cannot_be_rejected(self):
+        offer = Offer.objects.create(
+            listing=self.listing,
+            buyer=self.buyer,
+            unit_amount=800,
+            currency="USD",
+            quantity=1,
+            status=Offer.Status.ACCEPTED,
+        )
+
+        with self.assertRaises(ValidationError):
+            OfferService.reject_offer(
+                offer=offer,
+                user=self.seller_user,
+            )
+
+    def test_seller_can_counter_offer(self):
+        offer = Offer.objects.create(
+            listing=self.listing,
+            buyer=self.buyer,
+            unit_amount=750,
+            currency="USD",
+            quantity=1,
+            status=Offer.Status.PENDING,
         )
 
         counter = OfferService.counter_offer(
             offer=offer,
             user=self.seller_user,
-            unit_amount=820.00,
-            message="Je peux descendre à 820.",
+            unit_amount=820,
+            message="820 USD maximum.",
         )
-
-        self.assertEqual(counter.status, Offer.Status.PENDING)
-        self.assertEqual(counter.parent_offer, offer)
-        self.assertEqual(counter.unit_amount, 820.00)
 
         offer.refresh_from_db()
+
         self.assertEqual(offer.status, Offer.Status.COUNTERED)
+        self.assertEqual(counter.status, Offer.Status.PENDING)
+        self.assertEqual(counter.parent_offer, offer)
+        self.assertEqual(counter.unit_amount, 820)
 
-    def test_cannot_accept_non_pending_offer(self):
-        offer = OfferService.create_offer(
-            buyer=self.buyer,
+    def test_offer_negotiation_chain(self):
+        first = Offer.objects.create(
             listing=self.listing,
-            unit_amount=800.00,
+            buyer=self.buyer,
+            unit_amount=750,
+            currency="USD",
+            quantity=1,
+            status=Offer.Status.PENDING,
         )
-        OfferService.reject_offer(offer=offer, user=self.seller_user)
 
-        with self.assertRaises(ValidationError):
-            OfferService.accept_offer(offer=offer, user=self.seller_user)
+        second = OfferService.counter_offer(
+            offer=first,
+            user=self.seller_user,
+            unit_amount=820,
+        )
+
+        third = OfferService.counter_offer(
+            offer=second,
+            user=self.buyer,
+            unit_amount=800,
+        )
+
+        first.refresh_from_db()
+        second.refresh_from_db()
+
+        self.assertEqual(first.status, Offer.Status.COUNTERED)
+        self.assertEqual(second.status, Offer.Status.COUNTERED)
+        self.assertEqual(third.status, Offer.Status.PENDING)
+        self.assertEqual(third.parent_offer, second)
 
     def test_str_representation(self):
         offer = Offer.objects.create(
             listing=self.listing,
             buyer=self.buyer,
-            unit_amount=800.15,
+            unit_amount=800.00,
             currency="USD",
             quantity=1,
             status=Offer.Status.PENDING,
         )
-        expected = f"{self.buyer} → {self.listing} : 800.15 USD"
+        expected = f"{self.buyer} → {self.listing} : 800.0 USD"
         self.assertEqual(str(offer), expected)

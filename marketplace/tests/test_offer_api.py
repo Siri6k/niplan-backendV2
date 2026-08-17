@@ -217,7 +217,7 @@ class OfferAPITests(APITestCase):
 
         self.assertEqual(response.status_code, 400)
 
-    def test_my_offers(self):
+    def test_buyer_can_get_my_offers(self):
         Offer.objects.create(
             listing=self.listing,
             buyer=self.buyer,
@@ -233,10 +233,14 @@ class OfferAPITests(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["listing_title"], "Samsung Galaxy S24")
+        # Avec pagination DRF : response.data["results"] et response.data["count"]
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(
+            response.data["results"][0]["listing_title"], "Samsung Galaxy S24"
+        )
 
-    def test_seller_offers(self):
+    def test_seller_can_get_received_offers(self):
         Offer.objects.create(
             listing=self.listing,
             buyer=self.buyer,
@@ -252,4 +256,67 @@ class OfferAPITests(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["seller_store"], "Tech Store")
+
+    def test_seller_can_list_all_offers_on_his_listing(self):
+        """Le vendeur voit toutes les offres sur son listing"""
+        Offer.objects.create(
+            listing=self.listing,
+            buyer=self.buyer,
+            unit_amount=800.00,
+            currency="USD",
+            quantity=1,
+            status=Offer.Status.PENDING,
+        )
+        Offer.objects.create(
+            listing=self.listing,
+            buyer=self.other_user,
+            unit_amount=750.00,
+            currency="USD",
+            quantity=1,
+            status=Offer.Status.PENDING,
+        )
+
+        self.client.force_authenticate(user=self.seller_user)
+
+        url = reverse(
+            "marketplace:listing-offers",
+            kwargs={"pk": self.listing.pk},
+        )
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 2)
+
+    def test_buyer_can_only_see_his_own_offers_on_listing(self):
+        """L'acheteur ne voit que ses propres offres sur un listing"""
+        Offer.objects.create(
+            listing=self.listing,
+            buyer=self.buyer,
+            unit_amount=800.00,
+            currency="USD",
+            quantity=1,
+            status=Offer.Status.PENDING,
+        )
+        Offer.objects.create(
+            listing=self.listing,
+            buyer=self.other_user,
+            unit_amount=750.00,
+            currency="USD",
+            quantity=1,
+            status=Offer.Status.PENDING,
+        )
+
+        self.client.force_authenticate(user=self.buyer)
+
+        url = reverse(
+            "marketplace:listing-offers",
+            kwargs={"pk": self.listing.pk},
+        )
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["unit_amount"], "800.00")

@@ -11,8 +11,8 @@ from marketplace.controllers import (
     ListingFavoriteView,
     OfferActionView,
     ListingOfferView,
-    MyOffersView,
-    SellerOffersView,
+    MyOfferListView,
+    SellerOfferListView,
 )
 
 app_name = "marketplace"
@@ -48,12 +48,12 @@ urlpatterns = [
     ),
     path(
         "my-offers/",
-        MyOffersView.as_view(),
+        MyOfferListView.as_view(),
         name="my-offers",
     ),
     path(
         "seller/offers/",
-        SellerOffersView.as_view(),
+        SellerOfferListView.as_view(),
         name="seller-offers",
     ),
 ]

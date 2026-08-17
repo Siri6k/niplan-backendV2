@@ -8,6 +8,11 @@ from marketplace.models import Listing, Offer
 class OfferService:
 
     @staticmethod
+    def ensure_pending(offer):
+        if offer.status != Offer.Status.PENDING:
+            raise ValidationError("Cette offre n'est plus active.")
+
+    @staticmethod
     @transaction.atomic
     def create_offer(
         *,
@@ -52,11 +57,10 @@ class OfferService:
     @staticmethod
     @transaction.atomic
     def accept_offer(*, offer, user):
+        OfferService.ensure_pending(offer)
+
         if offer.listing.seller.user_id != user.id:
             raise ValidationError("Seul le vendeur peut accepter cette offre.")
-
-        if offer.status != Offer.Status.PENDING:
-            raise ValidationError("Cette offre n'est plus en attente.")
 
         offer.status = Offer.Status.ACCEPTED
         offer.responded_at = timezone.now()
@@ -67,11 +71,10 @@ class OfferService:
     @staticmethod
     @transaction.atomic
     def reject_offer(*, offer, user):
+        OfferService.ensure_pending(offer)
+
         if offer.listing.seller.user_id != user.id:
             raise ValidationError("Seul le vendeur peut refuser cette offre.")
-
-        if offer.status != Offer.Status.PENDING:
-            raise ValidationError("Cette offre n'est plus en attente.")
 
         offer.status = Offer.Status.REJECTED
         offer.responded_at = timezone.now()
@@ -82,11 +85,10 @@ class OfferService:
     @staticmethod
     @transaction.atomic
     def cancel_offer(*, offer, user):
+        OfferService.ensure_pending(offer)
+
         if offer.buyer_id != user.id:
             raise ValidationError("Seul l'acheteur peut annuler cette offre.")
-
-        if offer.status != Offer.Status.PENDING:
-            raise ValidationError("Cette offre ne peut plus être annulée.")
 
         offer.status = Offer.Status.CANCELLED
         offer.responded_at = timezone.now()
@@ -97,8 +99,7 @@ class OfferService:
     @staticmethod
     @transaction.atomic
     def counter_offer(*, offer, user, unit_amount, message=""):
-        if offer.status != Offer.Status.PENDING:
-            raise ValidationError("Cette offre n'est plus active.")
+        OfferService.ensure_pending(offer)
 
         listing = offer.listing
 

@@ -10,6 +10,8 @@ from cart.models import Cart, CartItem
 from cart.services.cart_service import CartService
 
 from decimal import Decimal
+from django.utils import timezone
+from datetime import timedelta
 
 
 class CartServiceTests(TestCase):
@@ -310,3 +312,66 @@ class CartServiceTests(TestCase):
         cart = Cart.objects.get(pk=cart.pk)
 
         self.assertEqual(cart.items.count(), 0)
+
+    def test_mark_abandoned_changes_status(self):
+        cart = CartService.get_or_create_active_cart(buyer=self.buyer)
+        self.assertEqual(cart.status, Cart.Status.ACTIVE)
+
+        CartService.mark_abandoned(cart=cart)
+        cart.refresh_from_db()
+
+        self.assertEqual(cart.status, Cart.Status.ABANDONED)
+
+    def test_mark_abandoned_does_not_affect_checked_out_cart(self):
+        checked_out_cart = Cart.objects.create(
+            buyer=self.buyer,
+            status=Cart.Status.CHECKED_OUT,
+        )
+        CartService.mark_abandoned(cart=checked_out_cart)
+        checked_out_cart.refresh_from_db()
+        self.assertEqual(checked_out_cart.status, Cart.Status.CHECKED_OUT)
+
+    def test_last_accessed_at_updated_on_operations(self):
+        # Initialisation
+        cart = CartService.get_or_create_active_cart(buyer=self.buyer)
+        initial_access = cart.last_accessed_at
+
+        # L'opération add_item doit mettre à jour last_accessed_at
+        CartService.add_item(buyer=self.buyer, listing=self.listing, quantity=1)
+        cart.refresh_from_db()
+        self.assertGreater(cart.last_accessed_at, initial_access)
+
+        # Même chose pour update_item_quantity
+        item = cart.items.first()
+        old_access = cart.last_accessed_at
+        CartService.update_item_quantity(buyer=self.buyer, item=item, quantity=2)
+        cart.refresh_from_db()
+        self.assertGreater(cart.last_accessed_at, old_access)
+
+        # remove_item
+        old_access = cart.last_accessed_at
+        CartService.remove_item(buyer=self.buyer, item=item)
+        cart.refresh_from_db()
+        self.assertGreater(cart.last_accessed_at, old_access)
+
+        # clear_cart
+        CartService.add_item(buyer=self.buyer, listing=self.listing, quantity=1)
+        cart.refresh_from_db()
+        old_access = cart.last_accessed_at
+        CartService.clear_cart(buyer=self.buyer)
+        cart.refresh_from_db()
+        self.assertGreater(cart.last_accessed_at, old_access)
+
+    def test_get_active_cart_with_items_touches_last_accessed(self):
+        cart = CartService.get_or_create_active_cart(buyer=self.buyer)
+        old_access = cart.last_accessed_at
+        # Simuler un délai pour être sûr que la date change
+        cart.last_accessed_at = timezone.now() - timedelta(seconds=10)
+        cart.save(update_fields=["last_accessed_at"])
+        cart.refresh_from_db()
+        self.assertLess(cart.last_accessed_at, old_access)
+
+        # Appel de get_active_cart_with_items qui doit toucher le panier
+        CartService.get_active_cart_with_items(buyer=self.buyer)
+        cart.refresh_from_db()
+        self.assertGreater(cart.last_accessed_at, old_access)

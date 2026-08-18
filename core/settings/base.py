@@ -213,6 +213,7 @@ SPECTACULAR_SETTINGS = {
         {"name": "Sellers", "description": "Vendeurs & boutiques"},
         {"name": "Catalog", "description": "Catégories & produits"},
         {"name": "Marketplace", "description": "Annonces & favoris"},
+        {"name": "Cart", "description": "Gestion des paniers"},
         {"name": "Orders", "description": "Panier & commandes"},
         {"name": "Payments", "description": "Paiements & portefeuilles"},
         {"name": "Reviews", "description": "Avis & notation"},

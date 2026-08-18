@@ -50,6 +50,11 @@ class Cart(models.Model):
         _("mis à jour le"),
         auto_now=True,
     )
+    last_accessed_at = models.DateTimeField(
+        _("dernier accès"),
+        default=timezone.now,
+        help_text=_("Date de dernière activité sur le panier"),
+    )
 
     class Meta:
         db_table = "cart_carts"

@@ -33,11 +33,8 @@ class CartView(APIView):
         if cart is None:
             cart = CartService.get_or_create_active_cart(buyer=request.user)
         else:
-            # Nettoyer les items invalides (statut, stock)
             CartService.clean_cart(cart=cart)
-
-        # Recharger avec prefetch après nettoyage
-        cart = CartService.get_active_cart_with_items(buyer=request.user)
+            cart = CartService.get_active_cart_with_items(buyer=request.user)
         return Response(CartReadSerializer(cart).data, status=status.HTTP_200_OK)
 
     def delete(self, request):
@@ -58,12 +55,7 @@ class CartItemCreateView(APIView):
     def post(self, request):
         serializer = CartItemCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        listing = get_object_or_404(
-            Listing,
-            pk=serializer.validated_data["listing"],
-        )
-
+        listing = get_object_or_404(Listing, pk=serializer.validated_data["listing"])
         try:
             item = CartService.add_item(
                 buyer=request.user,
@@ -72,7 +64,6 @@ class CartItemCreateView(APIView):
             )
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
         return Response(
             CartItemReadSerializer(item).data, status=status.HTTP_201_CREATED
         )
@@ -94,7 +85,6 @@ class CartItemDetailView(APIView):
         )
         serializer = CartItemUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         try:
             item = CartService.update_item_quantity(
                 buyer=request.user,
@@ -103,7 +93,6 @@ class CartItemDetailView(APIView):
             )
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
         return Response(CartItemReadSerializer(item).data, status=status.HTTP_200_OK)
 
     def delete(self, request, pk):
@@ -115,5 +104,4 @@ class CartItemDetailView(APIView):
             CartService.remove_item(buyer=request.user, item=item)
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
         return Response(status=status.HTTP_204_NO_CONTENT)

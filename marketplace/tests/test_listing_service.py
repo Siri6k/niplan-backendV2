@@ -226,3 +226,79 @@ class ListingServiceTests(TestCase):
 
         with self.assertRaises(ValidationError):
             ListingService.publish_listing(listing=listing, user=self.user)
+
+    def test_cannot_create_duplicate_listing_for_same_variant(self):
+
+        ListingService.create_listing(
+            user=self.user,
+            variant=self.variant,
+            title="Samsung Galaxy S24",
+            price=Decimal("850.00"),
+            stock=10,
+        )
+
+        with self.assertRaises(ValidationError):
+
+            ListingService.create_listing(
+                user=self.user,
+                variant=self.variant,
+                title="Samsung Galaxy S24 duplicate",
+                price=Decimal("800.00"),
+                stock=5,
+            )
+
+    def test_cannot_create_duplicate_listing_for_same_variant(self):
+
+        ListingService.create_listing(
+            user=self.user,
+            variant=self.variant,
+            title="Samsung Galaxy S24",
+            price=Decimal("850.00"),
+            currency="USD",
+            stock=10,
+        )
+
+        with self.assertRaises(ValidationError):
+
+            ListingService.create_listing(
+                user=self.user,
+                variant=self.variant,
+                title="Samsung Galaxy S24 Duplicate",
+                price=Decimal("800.00"),
+                currency="USD",
+                stock=5,
+            )
+    def test_can_create_listing_after_archiving_previous_listing(self):
+
+        listing = ListingService.create_listing(
+            user=self.user,
+            variant=self.variant,
+            title="Samsung Galaxy S24",
+            price=Decimal("850.00"),
+            currency="USD",
+            stock=10,
+        )
+
+        ListingService.archive_listing(
+            listing=listing,
+            user=self.user,
+        )
+
+        new_listing = ListingService.create_listing(
+            user=self.user,
+            variant=self.variant,
+            title="Samsung Galaxy S24 New Listing",
+            price=Decimal("800.00"),
+            currency="USD",
+            stock=5,
+        )
+
+        self.assertNotEqual(
+            listing.id,
+            new_listing.id,
+        )
+
+        self.assertEqual(
+            new_listing.status,
+            Listing.Status.DRAFT,
+        )

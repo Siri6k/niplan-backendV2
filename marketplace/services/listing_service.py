@@ -74,6 +74,11 @@ class ListingService:
         ListingService.validate_store_ownership(store, seller)
         ListingService.validate_variant(variant)
 
+        ListingService.ensure_no_duplicate_listing(
+            seller=seller,
+            variant=variant,
+        )
+
         if price <= 0:
             raise ValidationError("Le prix doit être supérieur à zéro.")
 
@@ -188,3 +193,26 @@ class ListingService:
         listing.save(update_fields=["status", "updated_at"])
 
         return listing
+
+    @staticmethod
+    def ensure_no_duplicate_listing(
+        seller: SellerProfile,
+        variant: ProductVariant,
+    ) -> None:
+
+        exists = Listing.objects.filter(
+            seller=seller,
+            variant=variant,
+            status__in=[
+                Listing.Status.DRAFT,
+                Listing.Status.PENDING,
+                Listing.Status.PUBLISHED,
+                Listing.Status.PAUSED,
+            ],
+        ).exists()
+
+        if exists:
+            raise ValidationError(
+                "Vous avez déjà une annonce active ou en brouillon "
+                "pour cette variante."
+            )

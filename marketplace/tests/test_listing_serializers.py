@@ -69,7 +69,6 @@ class ListingSerializerTests(TestCase):
 
     def test_valid_create_data(self):
         data = {
-            "store": str(self.store.pk),
             "variant": str(self.variant.pk),
             "title": "Samsung Galaxy S24",
             "description": "Téléphone neuf",
@@ -83,17 +82,26 @@ class ListingSerializerTests(TestCase):
         serializer = ListingCreateSerializer(data=data)
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
-    def test_seller_is_not_accepted(self):
+    def test_seller_is_not_client_controlled(self):
         data = {
             "seller": str(self.seller.pk),
-            "store": str(self.store.pk),
             "variant": str(self.variant.pk),
             "title": "Samsung Galaxy S24",
             "price": "850.00",
             "stock": 10,
         }
+
         serializer = ListingCreateSerializer(data=data)
-        self.assertNotIn("seller", serializer.fields)
+
+        self.assertTrue(
+            serializer.is_valid(),
+            serializer.errors,
+        )
+
+        self.assertNotIn(
+            "seller",
+            serializer.validated_data,
+        )
 
     def test_status_is_not_client_controlled(self):
         serializer = ListingCreateSerializer()
@@ -101,7 +109,6 @@ class ListingSerializerTests(TestCase):
 
     def test_invalid_currency(self):
         data = {
-            "store": str(self.store.pk),
             "variant": str(self.variant.pk),
             "title": "Samsung Galaxy S24",
             "price": "850.00",
@@ -114,7 +121,6 @@ class ListingSerializerTests(TestCase):
 
     def test_zero_price(self):
         data = {
-            "store": str(self.store.pk),
             "variant": str(self.variant.pk),
             "title": "Samsung Galaxy S24",
             "price": "0.00",
@@ -126,7 +132,6 @@ class ListingSerializerTests(TestCase):
 
     def test_negative_price(self):
         data = {
-            "store": str(self.store.pk),
             "variant": str(self.variant.pk),
             "title": "Samsung Galaxy S24",
             "price": "-10.00",

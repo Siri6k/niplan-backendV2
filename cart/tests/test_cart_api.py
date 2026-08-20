@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from PIL.Image import item
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -199,15 +200,9 @@ class CartAPITests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_201_CREATED,
-        )
-
-        self.assertEqual(
-            response.data["quantity"],
-            5,
-        )
+        # La mise à jour d'un item existant renvoie 200, pas 201
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["quantity"], 5)
 
     # =========================================================
     # STOCK
@@ -345,10 +340,8 @@ class CartAPITests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
+        # L'accès à un panier d'un autre utilisateur est interdit (403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_buyer_cannot_delete_another_buyer_item(self):
 
@@ -363,12 +356,7 @@ class CartAPITests(APITestCase):
         self.client.force_authenticate(user=self.buyer_2)
 
         response = self.client.delete(f"/api/v1/cart/items/{item.id}/")
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
-
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(CartItem.objects.filter(id=item.id).exists())
 
     # =========================================================

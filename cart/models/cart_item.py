@@ -65,7 +65,9 @@ class CartItem(models.Model):
     @property
     def subtotal(self):
         """
-        Sous-total pour cette ligne (prix actuel du listing × quantité).
-        À revalider lors du checkout.
+        Sous-total courant de la ligne.
+
+        Le panier utilise toujours le prix actuel du Listing.
+        Le prix définitif sera figé dans OrderItem lors du checkout.
         """
         return self.listing.price * self.quantity

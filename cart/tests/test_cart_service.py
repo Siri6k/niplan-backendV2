@@ -1,17 +1,17 @@
 # cart/tests/test_cart_service.py
 
+from decimal import Decimal
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.utils import timezone
 
 from accounts.models import SellerProfile, Store, User
 from catalog.models import Category, Product, ProductVariant
 from marketplace.models import Listing
 from cart.models import Cart, CartItem
 from cart.services.cart_service import CartService
-
-from decimal import Decimal
-from django.utils import timezone
-from datetime import timedelta
 
 
 class CartServiceTests(TestCase):
@@ -99,7 +99,7 @@ class CartServiceTests(TestCase):
     # ---------------------------------------------------------
 
     def test_add_item(self):
-        item = CartService.add_item(
+        item, _ = CartService.add_item(
             buyer=self.buyer,
             listing=self.listing,
             quantity=2,
@@ -109,12 +109,12 @@ class CartServiceTests(TestCase):
         self.assertEqual(item.cart.buyer, self.buyer)
 
     def test_add_same_listing_increases_quantity(self):
-        item_1 = CartService.add_item(
+        item_1, _ = CartService.add_item(
             buyer=self.buyer,
             listing=self.listing,
             quantity=2,
         )
-        item_2 = CartService.add_item(
+        item_2, _ = CartService.add_item(
             buyer=self.buyer,
             listing=self.listing,
             quantity=3,
@@ -131,7 +131,6 @@ class CartServiceTests(TestCase):
             )
 
     def test_add_existing_item_cannot_exceed_stock(self):
-
         CartService.add_item(
             buyer=self.buyer,
             listing=self.listing,
@@ -177,7 +176,7 @@ class CartServiceTests(TestCase):
     # ---------------------------------------------------------
 
     def test_update_item_quantity(self):
-        item = CartService.add_item(
+        item, _ = CartService.add_item(
             buyer=self.buyer,
             listing=self.listing,
             quantity=2,
@@ -190,7 +189,7 @@ class CartServiceTests(TestCase):
         self.assertEqual(updated.quantity, 5)
 
     def test_update_quantity_cannot_exceed_stock(self):
-        item = CartService.add_item(
+        item, _ = CartService.add_item(
             buyer=self.buyer,
             listing=self.listing,
             quantity=2,
@@ -207,7 +206,7 @@ class CartServiceTests(TestCase):
     # ---------------------------------------------------------
 
     def test_remove_item(self):
-        item = CartService.add_item(
+        item, _ = CartService.add_item(
             buyer=self.buyer,
             listing=self.listing,
             quantity=2,
@@ -298,19 +297,14 @@ class CartServiceTests(TestCase):
             CartService.add_item(buyer=self.buyer, listing=listing_eur, quantity=1)
 
     def test_clean_cart_removes_unavailable_listings(self):
-        # Ajouter un item
         CartService.add_item(buyer=self.buyer, listing=self.listing, quantity=2)
-
-        # Rendre le listing non publié
         self.listing.status = Listing.Status.PAUSED
         self.listing.save()
 
         cart = CartService.get_active_cart_with_items(buyer=self.buyer)
         CartService.clean_cart(cart=cart)
 
-        # Recharger le panier depuis la base pour obtenir l'état réel
         cart = Cart.objects.get(pk=cart.pk)
-
         self.assertEqual(cart.items.count(), 0)
 
     def test_mark_abandoned_changes_status(self):
@@ -319,7 +313,6 @@ class CartServiceTests(TestCase):
 
         CartService.mark_abandoned(cart=cart)
         cart.refresh_from_db()
-
         self.assertEqual(cart.status, Cart.Status.ABANDONED)
 
     def test_mark_abandoned_does_not_affect_checked_out_cart(self):
@@ -332,29 +325,24 @@ class CartServiceTests(TestCase):
         self.assertEqual(checked_out_cart.status, Cart.Status.CHECKED_OUT)
 
     def test_last_accessed_at_updated_on_operations(self):
-        # Initialisation
         cart = CartService.get_or_create_active_cart(buyer=self.buyer)
         initial_access = cart.last_accessed_at
 
-        # L'opération add_item doit mettre à jour last_accessed_at
         CartService.add_item(buyer=self.buyer, listing=self.listing, quantity=1)
         cart.refresh_from_db()
         self.assertGreater(cart.last_accessed_at, initial_access)
 
-        # Même chose pour update_item_quantity
         item = cart.items.first()
         old_access = cart.last_accessed_at
         CartService.update_item_quantity(buyer=self.buyer, item=item, quantity=2)
         cart.refresh_from_db()
         self.assertGreater(cart.last_accessed_at, old_access)
 
-        # remove_item
         old_access = cart.last_accessed_at
         CartService.remove_item(buyer=self.buyer, item=item)
         cart.refresh_from_db()
         self.assertGreater(cart.last_accessed_at, old_access)
 
-        # clear_cart
         CartService.add_item(buyer=self.buyer, listing=self.listing, quantity=1)
         cart.refresh_from_db()
         old_access = cart.last_accessed_at
@@ -365,13 +353,70 @@ class CartServiceTests(TestCase):
     def test_get_active_cart_with_items_touches_last_accessed(self):
         cart = CartService.get_or_create_active_cart(buyer=self.buyer)
         old_access = cart.last_accessed_at
-        # Simuler un délai pour être sûr que la date change
         cart.last_accessed_at = timezone.now() - timedelta(seconds=10)
         cart.save(update_fields=["last_accessed_at"])
         cart.refresh_from_db()
         self.assertLess(cart.last_accessed_at, old_access)
 
-        # Appel de get_active_cart_with_items qui doit toucher le panier
         CartService.get_active_cart_with_items(buyer=self.buyer)
         cart.refresh_from_db()
         self.assertGreater(cart.last_accessed_at, old_access)
+
+    # Nouveaux tests pour clean_cart et validation des devises
+    def test_clean_cart_reduces_quantity_when_stock_decreases(self):
+        cart = Cart.objects.create(buyer=self.buyer, status=Cart.Status.ACTIVE)
+        item = CartItem.objects.create(cart=cart, listing=self.listing, quantity=8)
+        self.listing.stock = 5
+        self.listing.save()
+
+        CartService.clean_cart(cart=cart)
+
+        item.refresh_from_db()
+        self.assertEqual(item.quantity, 5)
+
+    def test_clean_cart_removes_item_when_listing_is_out_of_stock(self):
+        cart = Cart.objects.create(buyer=self.buyer, status=Cart.Status.ACTIVE)
+        item = CartItem.objects.create(cart=cart, listing=self.listing, quantity=5)
+        self.listing.stock = 0
+        self.listing.save()
+
+        CartService.clean_cart(cart=cart)
+
+        self.assertFalse(CartItem.objects.filter(pk=item.pk).exists())
+
+    def test_clean_cart_removes_unpublished_listing(self):
+        cart = Cart.objects.create(buyer=self.buyer, status=Cart.Status.ACTIVE)
+        item = CartItem.objects.create(cart=cart, listing=self.listing, quantity=5)
+        self.listing.status = Listing.Status.DRAFT
+        self.listing.save()
+
+        CartService.clean_cart(cart=cart)
+
+        self.assertFalse(CartItem.objects.filter(pk=item.pk).exists())
+
+    def test_validate_cart_rejects_multiple_currencies(self):
+        listing2 = Listing.objects.create(
+            seller=self.seller,
+            store=self.store,
+            variant=self.variant,
+            title="Samsung Galaxy S24 (EUR)",
+            price=Decimal("800.00"),
+            currency="EUR",
+            stock=5,
+            status=Listing.Status.PUBLISHED,
+        )
+        cart = Cart.objects.create(buyer=self.buyer, status=Cart.Status.ACTIVE)
+        CartItem.objects.create(cart=cart, listing=self.listing, quantity=1)
+        CartItem.objects.create(cart=cart, listing=listing2, quantity=1)
+
+        with self.assertRaises(ValidationError) as cm:
+            CartService.validate_cart(cart=cart)
+        self.assertIn("même devise", str(cm.exception))
+
+    def test_seller_cannot_add_own_listing_to_cart(self):
+        with self.assertRaises(ValidationError):
+            CartService.add_item(
+                buyer=self.seller_user,
+                listing=self.listing,
+                quantity=1,
+            )

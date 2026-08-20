@@ -1,5 +1,3 @@
-# cart/views/cart.py
-
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
@@ -29,17 +27,23 @@ class CartView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        cart = CartService.get_or_create_active_cart(buyer=request.user)
+
+        CartService.clean_cart(cart=cart)
+
         cart = CartService.get_active_cart_with_items(buyer=request.user)
-        if cart is None:
-            cart = CartService.get_or_create_active_cart(buyer=request.user)
-        else:
-            CartService.clean_cart(cart=cart)
-            cart = CartService.get_active_cart_with_items(buyer=request.user)
-        return Response(CartReadSerializer(cart).data, status=status.HTTP_200_OK)
+
+        return Response(
+            CartReadSerializer(cart).data,
+            status=status.HTTP_200_OK,
+        )
 
     def delete(self, request):
         cart = CartService.clear_cart(buyer=request.user)
-        return Response(CartReadSerializer(cart).data, status=status.HTTP_200_OK)
+        return Response(
+            CartReadSerializer(cart).data,
+            status=status.HTTP_200_OK,
+        )
 
 
 @extend_schema(
@@ -47,7 +51,11 @@ class CartView(APIView):
     summary="Ajouter un article au panier",
     description="Ajoute un Listing au panier du buyer connecté.",
     request=CartItemCreateSerializer,
-    responses={201: CartItemReadSerializer, 400: "Bad Request"},
+    responses={
+        201: CartItemReadSerializer,
+        200: CartItemReadSerializer,
+        400: "Bad Request",
+    },
 )
 class CartItemCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -55,17 +63,27 @@ class CartItemCreateView(APIView):
     def post(self, request):
         serializer = CartItemCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        listing = get_object_or_404(Listing, pk=serializer.validated_data["listing"])
+
+        listing = get_object_or_404(
+            Listing,
+            pk=serializer.validated_data["listing"],
+        )
+
         try:
-            item = CartService.add_item(
+            item, created = CartService.add_item(
                 buyer=request.user,
                 listing=listing,
                 quantity=serializer.validated_data["quantity"],
             )
         except ValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": e.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         return Response(
-            CartItemReadSerializer(item).data, status=status.HTTP_201_CREATED
+            CartItemReadSerializer(item).data,
+            status=(status.HTTP_201_CREATED if created else status.HTTP_200_OK),
         )
 
 
@@ -83,25 +101,54 @@ class CartItemDetailView(APIView):
             CartItem.objects.select_related("cart", "listing"),
             pk=pk,
         )
+
+        # Vérification rapide que l'utilisateur est bien le propriétaire
+        if item.cart.buyer_id != request.user.id:
+            return Response(
+                {"detail": "Vous ne pouvez pas modifier cet article."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         serializer = CartItemUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         try:
-            item = CartService.update_item_quantity(
+            updated_item = CartService.update_item_quantity(
                 buyer=request.user,
                 item=item,
                 quantity=serializer.validated_data["quantity"],
             )
         except ValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(CartItemReadSerializer(item).data, status=status.HTTP_200_OK)
+            return Response(
+                {"detail": e.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            CartItemReadSerializer(updated_item).data,
+            status=status.HTTP_200_OK,
+        )
 
     def delete(self, request, pk):
         item = get_object_or_404(
             CartItem.objects.select_related("cart"),
             pk=pk,
         )
+
+        if item.cart.buyer_id != request.user.id:
+            return Response(
+                {"detail": "Vous ne pouvez pas supprimer cet article."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         try:
             CartService.remove_item(buyer=request.user, item=item)
         except ValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(
+                {"detail": e.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )

@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -31,6 +32,13 @@ class OrderItem(models.Model):
         on_delete=models.PROTECT,
         related_name="order_items",
         verbose_name=_("annonce"),
+    )
+
+    seller = models.ForeignKey(
+        "accounts.SellerProfile",
+        on_delete=models.PROTECT,
+        related_name="order_items",
+        verbose_name=_("vendeur"),
     )
 
     product_name = models.CharField(

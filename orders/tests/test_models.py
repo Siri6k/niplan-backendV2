@@ -149,6 +149,7 @@ class OrderModelTests(TestCase):
         item = OrderItem.objects.create(
             order=self.order,
             listing=self.listing,
+            seller=self.seller,  # Ajouté
             product_name="Samsung Galaxy S24",
             variant_name="256GB Black",
             sku="SAM-S24-BLK-256",
@@ -159,11 +160,13 @@ class OrderModelTests(TestCase):
         self.assertEqual(item.order, self.order)
         self.assertEqual(item.listing, self.listing)
         self.assertEqual(item.quantity, 2)
+        self.assertEqual(item.seller, self.seller)  # Vérification
 
     def test_order_item_string_representation(self):
         item = OrderItem.objects.create(
             order=self.order,
             listing=self.listing,
+            seller=self.seller,  # Ajouté
             product_name="Samsung Galaxy S24",
             quantity=2,
             unit_price=Decimal("850.00"),
@@ -175,6 +178,7 @@ class OrderModelTests(TestCase):
         OrderItem.objects.create(
             order=self.order,
             listing=self.listing,
+            seller=self.seller,  # Ajouté
             product_name="Samsung Galaxy S24",
             quantity=2,
             unit_price=Decimal("850.00"),
@@ -183,6 +187,7 @@ class OrderModelTests(TestCase):
         OrderItem.objects.create(
             order=self.order,
             listing=self.listing,
+            seller=self.seller,  # Ajouté
             product_name="Samsung Galaxy S24",
             quantity=1,
             unit_price=Decimal("850.00"),
@@ -194,6 +199,7 @@ class OrderModelTests(TestCase):
         item = OrderItem.objects.create(
             order=self.order,
             listing=self.listing,
+            seller=self.seller,  # Ajouté
             product_name="Samsung Galaxy S24",
             quantity=1,
             unit_price=Decimal("850.00"),
@@ -207,6 +213,7 @@ class OrderModelTests(TestCase):
         OrderItem.objects.create(
             order=self.order,
             listing=self.listing,
+            seller=self.seller,  # Ajouté
             product_name="Samsung Galaxy S24",
             quantity=1,
             unit_price=Decimal("850.00"),

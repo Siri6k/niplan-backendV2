@@ -13,7 +13,7 @@ from cart.serializers import (
     CartItemUpdateSerializer,
     CartReadSerializer,
 )
-from cart.services.cart_service import CartService
+from cart.services import CartService
 from marketplace.models import Listing
 
 

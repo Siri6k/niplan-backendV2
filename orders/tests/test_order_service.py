@@ -11,7 +11,7 @@ from cart.models import Cart, CartItem
 from cart.services.cart_service import CartService
 
 from orders.models import Order, OrderItem
-from orders.services.order_service import OrderService
+from orders.services import OrderService
 
 
 class OrderServiceTests(TestCase):

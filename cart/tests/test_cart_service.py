@@ -11,7 +11,7 @@ from accounts.models import SellerProfile, Store, User
 from catalog.models import Category, Product, ProductVariant
 from marketplace.models import Listing
 from cart.models import Cart, CartItem
-from cart.services.cart_service import CartService
+from cart.services import CartService
 
 
 class CartServiceTests(TestCase):

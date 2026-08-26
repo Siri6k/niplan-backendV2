@@ -13,6 +13,13 @@ class OrderItem(models.Model):
     de la commande afin de conserver un historique fiable.
     """
 
+    class Status(models.TextChoices):
+        PENDING = "PENDING", _("En attente")
+        PROCESSING = "PROCESSING", _("En préparation")
+        SHIPPED = "SHIPPED", _("Expédié")
+        DELIVERED = "DELIVERED", _("Livré")
+        CANCELLED = "CANCELLED", _("Annulé")
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -73,10 +80,22 @@ class OrderItem(models.Model):
         max_digits=12,
         decimal_places=2,
     )
+    # ✅ NOUVEAU CHAMP
+    status = models.CharField(
+        _("statut"),
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
 
     created_at = models.DateTimeField(
         _("créé le"),
         auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        _("mis à jour le"),
+        auto_now=True,
     )
 
     class Meta:

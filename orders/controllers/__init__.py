@@ -7,6 +7,7 @@ from .order import (
 from .seller_order import (
     SellerOrderListView,
     SellerOrderDetailView,
+    SellerOrderItemStatusView,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "OrderCancelView",
     "SellerOrderListView",
     "SellerOrderDetailView",
+    "SellerOrderItemStatusView",
 ]

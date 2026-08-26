@@ -7,6 +7,7 @@ from orders.controllers import (
     OrderCancelView,
     SellerOrderListView,
     SellerOrderDetailView,
+    SellerOrderItemStatusView,
 )
 
 urlpatterns = [
@@ -21,5 +22,10 @@ urlpatterns = [
     path("seller/", SellerOrderListView.as_view(), name="seller-order-list"),
     path(
         "seller/<uuid:pk>/", SellerOrderDetailView.as_view(), name="seller-order-detail"
+    ),
+    path(
+        "seller/<uuid:order_id>/items/<uuid:item_id>/status/",
+        SellerOrderItemStatusView.as_view(),
+        name="seller-order-item-status",
     ),
 ]

@@ -67,3 +67,15 @@ class SellerOrderSerializer(serializers.ModelSerializer):
             "listing__variant__product",
         )
         return SellerOrderItemSerializer(items, many=True).data
+
+
+class SellerOrderItemStatusSerializer(serializers.ModelSerializer):
+    status = serializers.ChoiceField(
+        choices=OrderItem.Status.choices,
+    )
+
+    class Meta:
+        model = OrderItem
+        fields = [
+            "status",
+        ]

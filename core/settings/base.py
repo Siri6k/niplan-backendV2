@@ -70,7 +70,7 @@ LOCAL_APPS = [
     "catalog",
     "marketplace",
     "cart",
-    # "orders",
+    "orders",
     # "payments",
     # "delivery",
     # "chat",

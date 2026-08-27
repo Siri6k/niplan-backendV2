@@ -17,7 +17,7 @@ class SellerOrderListView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["Seller Orders"],
+        tags=["Orders"],
         summary="Commandes du vendeur",
         responses={200: SellerOrderSerializer(many=True)},
     )
@@ -33,7 +33,7 @@ class SellerOrderDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["Seller Orders"],
+        tags=["Orders"],
         summary="Détail d'une commande vendeur",
         responses={200: SellerOrderSerializer},
     )
@@ -54,7 +54,7 @@ class SellerOrderItemStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["Seller Orders"],
+        tags=["Orders"],
         summary="Modifier le statut d'un article",
         request=SellerOrderItemStatusSerializer,
         responses={

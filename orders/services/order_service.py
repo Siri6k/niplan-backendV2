@@ -6,6 +6,7 @@ from django.db import transaction
 
 from cart.models import Cart
 from cart.services.cart_service import CartService
+from marketplace.models import Listing  # pour accéder au statut SOLD_OUT
 from orders.models import Order, OrderItem
 
 
@@ -15,30 +16,19 @@ class OrderService:
     @transaction.atomic
     def create_orders_from_cart(*, buyer):
         """
-        Transforme le panier actif en une ou plusieurs commandes,
-        une par vendeur.
-
-        Retourne la liste des commandes créées.
+        Transforme le panier actif en commandes (une par vendeur).
+        Verrouille les listings pour éviter les surventes.
         """
+        # 1. Verrouiller le panier
         cart = (
             Cart.objects.select_for_update()
-            .prefetch_related(
-                "items",
-                "items__listing",
-                "items__listing__store",
-                "items__listing__variant",
-                "items__listing__variant__product",
-            )
             .filter(buyer=buyer, status=Cart.Status.ACTIVE)
             .first()
         )
-
         if cart is None:
             raise ValidationError("Aucun panier actif.")
 
-        # Validation complète du panier (stock, disponibilité, devise, etc.)
-        CartService.validate_cart(cart=cart)
-
+        # 2. Récupérer les items avec verrouillage
         items = list(
             cart.items.select_for_update().select_related(
                 "listing",
@@ -48,13 +38,40 @@ class OrderService:
                 "listing__variant__product",
             )
         )
-
         if not items:
             raise ValidationError("Votre panier est vide.")
 
-        # -----------------------------------------------------
-        # Regrouper les articles par vendeur
-        # -----------------------------------------------------
+        # 3. Récupérer les listings avec verrouillage (pour revalidation)
+        listing_ids = [item.listing_id for item in items]
+        listings = {
+            listing.id: listing
+            for listing in Listing.objects.select_for_update().filter(
+                id__in=listing_ids
+            )
+        }
+
+        # 4. Valider le panier **après** verrouillage
+        #    On réutilise la logique de CartService.validate_cart mais avec les listings verrouillés
+        for item in items:
+            listing = listings.get(item.listing_id)
+            if listing is None:
+                raise ValidationError(f"L'annonce {item.listing_id} n'existe plus.")
+            if listing.status != Listing.Status.PUBLISHED:
+                raise ValidationError(
+                    f"L'article '{listing.title}' n'est plus disponible."
+                )
+            if listing.stock < item.quantity:
+                raise ValidationError(
+                    f"Stock insuffisant pour '{listing.title}'. "
+                    f"Disponible : {listing.stock}, demandé : {item.quantity}."
+                )
+        # Vérification de la devise unique
+        currencies = {listings[item.listing_id].currency for item in items}
+        if len(currencies) > 1:
+            raise ValidationError(
+                "Toutes les annonces doivent utiliser la même devise."
+            )
+            # 5. Regrouper par vendeur
         items_by_seller = defaultdict(list)
         for cart_item in items:
             seller = cart_item.listing.seller
@@ -62,13 +79,9 @@ class OrderService:
 
         created_orders = []
 
-        # -----------------------------------------------------
-        # Créer une commande par vendeur
-        # -----------------------------------------------------
+        # 6. Créer une commande par vendeur
         for seller, seller_items in items_by_seller.items():
-            # Devise commune (vérifiée par validate_cart)
             currency = seller_items[0].listing.currency
-
             order = Order.objects.create(
                 buyer=buyer,
                 seller=seller,
@@ -82,21 +95,13 @@ class OrderService:
             subtotal = Decimal("0.00")
 
             for cart_item in seller_items:
-                listing = cart_item.listing
-
-                # Revalidation du stock (peut avoir changé entre temps)
-                if listing.stock < cart_item.quantity:
-                    raise ValidationError(f"Stock insuffisant pour : {listing.title}.")
-
-                if listing.status != listing.Status.PUBLISHED:
-                    raise ValidationError(
-                        f"L'article {listing.title} n'est plus disponible."
-                    )
+                listing = listings[cart_item.listing_id]
 
                 unit_price = listing.price
                 quantity = cart_item.quantity
                 line_total = unit_price * quantity
 
+                # Créer la ligne de commande
                 OrderItem.objects.create(
                     order=order,
                     listing=listing,
@@ -105,15 +110,20 @@ class OrderService:
                     unit_price=unit_price,
                     subtotal=line_total,
                     product_name=listing.variant.product.name,
-                    variant_name=listing.variant.sku,  # ou un champ dédié
+                    variant_name=listing.variant.sku,
                     sku=listing.variant.sku,
                 )
 
                 subtotal += line_total
 
-                # Diminution du stock
+                # Décrémenter le stock
                 listing.stock -= quantity
-                listing.save(update_fields=["stock", "updated_at"])
+
+                # Passer en SOLD_OUT si le stock est épuisé
+                if listing.stock == 0:
+                    listing.status = Listing.Status.SOLD_OUT
+
+                listing.save(update_fields=["stock", "status", "updated_at"])
 
             # Mise à jour des totaux de la commande
             order.subtotal = subtotal
@@ -122,9 +132,7 @@ class OrderService:
 
             created_orders.append(order)
 
-        # -----------------------------------------------------
-        # Marquer le panier comme terminé
-        # -----------------------------------------------------
+        # 7. Marquer le panier comme CHECKED_OUT
         cart.status = Cart.Status.CHECKED_OUT
         cart.save(update_fields=["status", "updated_at"])
 

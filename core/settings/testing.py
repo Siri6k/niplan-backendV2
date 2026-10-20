@@ -35,3 +35,9 @@ EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 # Pas de password validators en test pour accélérer
 AUTH_PASSWORD_VALIDATORS = []
+
+# Pas de throttling pendant les tests
+REST_FRAMEWORK = {
+    **REST_FRAMEWORK,
+    "DEFAULT_THROTTLE_CLASSES": [],
+}

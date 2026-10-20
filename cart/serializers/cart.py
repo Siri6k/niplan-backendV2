@@ -37,5 +37,6 @@ class CartReadSerializer(serializers.ModelSerializer):
         )
 
     def get_currency(self, obj):
-        first_item = obj.items.select_related("listing").first()
+        items = list(obj.items.all())
+        first_item = items[0] if items else None
         return first_item.listing.currency if first_item else None

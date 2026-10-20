@@ -19,6 +19,9 @@ X_FRAME_OPTIONS = "DENY"
 
 # ─── CORS strict ─────────────────────────────────────────────────────
 
+# ─── Static files (WhiteNoise) ──────────────────────────────────────
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
 if not CORS_ALLOWED_ORIGINS:

@@ -104,6 +104,22 @@ class CartSerializerTests(TestCase):
         self.assertEqual(data["unit_price"], "850.00")
         self.assertEqual(data["quantity"], 2)
         self.assertEqual(data["subtotal"], Decimal("1700.00"))
+        self.assertEqual(data["store_id"], str(self.store.id))
+        self.assertEqual(data["store_slug"], "tech-store")
+        self.assertIsNone(data["thumbnail_url"])
+
+    def test_read_serializer_with_thumbnail(self):
+        from catalog.models import ProductMedia
+        ProductMedia.objects.create(
+            product=self.product,
+            variant=self.variant,
+            media_type=ProductMedia.MediaType.IMAGE,
+            url="https://cloudinary.com/image.jpg",
+            thumbnail_url="https://cloudinary.com/thumb.jpg",
+            is_primary=True,
+        )
+        serializer = CartItemReadSerializer(self.item)
+        self.assertEqual(serializer.data["thumbnail_url"], "https://cloudinary.com/thumb.jpg")
 
     def test_cart_read_serializer(self):
         serializer = CartReadSerializer(self.cart)

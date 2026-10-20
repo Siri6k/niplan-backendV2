@@ -27,16 +27,15 @@ class CartView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        cart = CartService.get_or_create_active_cart(buyer=request.user)
-
-        CartService.clean_cart(cart=cart)
-
         cart = CartService.get_active_cart_with_items(buyer=request.user)
-
+        if not cart:
+            cart = CartService.get_or_create_active_cart(buyer=request.user)
+            cart = CartService.get_active_cart_with_items(buyer=request.user)
         return Response(
             CartReadSerializer(cart).data,
             status=status.HTTP_200_OK,
         )
+
 
     def delete(self, request):
         cart = CartService.clear_cart(buyer=request.user)

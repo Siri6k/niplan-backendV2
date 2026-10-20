@@ -75,6 +75,8 @@ class CartService:
                 "items__listing__store",
                 "items__listing__variant",
                 "items__listing__variant__product",
+                "items__listing__variant__media",
+                "items__listing__variant__product__media",
             )
             .first()
         )

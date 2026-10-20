@@ -8,6 +8,12 @@ from catalog.controllers import (
     ProductDetailView,
     ProductListView,
     VariantDetailView,
+    VariantListView,
+    ProductVariantsView,
+    VariantAutocompleteView,
+    VariantBulkLookupView,
+    VariantBySkuView,
+    VariantFacetsView,
 )
 
 app_name = "catalog"
@@ -19,5 +25,28 @@ urlpatterns = [
     ),
     path("products/", ProductListView.as_view(), name="product-list"),
     path("products/<slug:slug>/", ProductDetailView.as_view(), name="product-detail"),
-    path("variants/<slug:sku>/", VariantDetailView.as_view(), name="variant-detail"),
+    # ---------- Variantes ----------
+    path("variants/", VariantListView.as_view(), name="variant-list"),
+    path("variants/<uuid:id>/", VariantDetailView.as_view(), name="variant-detail"),
+    path("variants/sku/<str:sku>/", VariantBySkuView.as_view(), name="variant-by-sku"),
+    path(
+        "products/<uuid:product_id>/variants/",
+        ProductVariantsView.as_view(),
+        name="product-variants",
+    ),
+    path(
+        "variants/autocomplete/",
+        VariantAutocompleteView.as_view(),
+        name="variant-autocomplete",
+    ),
+    path(
+        "variants/bulk-lookup/",
+        VariantBulkLookupView.as_view(),
+        name="variant-bulk-lookup",
+    ),
+    path(
+        "variants/facets/",
+        VariantFacetsView.as_view(),
+        name="variant-facets",
+    ),
 ]

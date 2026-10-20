@@ -63,12 +63,16 @@ class ProductVariant(models.Model):
     @property
     def attribute_summary(self) -> str:
         """Color: Black / Storage: 256GB"""
-        assignments = self.variant_values.select_related("value__attribute").all()
+        # ✅ Utilise le cache de prefetch si dispo, sinon fallback
+        prefetched = getattr(self, "_prefetched_variant_values", None)
+        if prefetched is not None:
+            assignments = prefetched
+        else:
+            assignments = self.variant_values.select_related("value__attribute").all()
         return " / ".join([str(a.value) for a in assignments])
 
     @property
     def display_title(self) -> str:
-        """Samsung Galaxy S24 — Color: Black / Storage: 256GB"""
         base = self.product.display_name
         summary = self.attribute_summary
         return f"{base} — {summary}" if summary else base
